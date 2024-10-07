@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gradient Descent Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            flex-direction: column;
+        }
+        #output {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+        canvas {
+            border: 1px solid black;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <button onclick="startVisualization()">Start Gradient Descent Visualization</button>
+        <canvas id="canvas" width="500" height="400"></canvas>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function startVisualization() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let x = Math.random() * 10 - 5; // Initial random value between -5 and 5
+            const learningRate = 0.1;
+            const iterations = 50;
+
+            function gradient(x) {
+                return 2 * x; // Derivative of the function f(x) = x^2
+            }
+
+            function f(x) {
+                return x * x; // Parabola function f(x) = x^2
+            }
+
+            function drawParabola() {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height);
+                for (let i = -5; i <= 5; i += 0.1) {
+                    const canvasX = (i + 5) * (canvas.width / 10);
+                    const canvasY = canvas.height - (f(i) * (canvas.height / 25)); // Scale y value to fit canvas
+                    ctx.lineTo(canvasX, canvasY);
+                }
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.closePath();
+            }
+
+            function drawPoint(x, y) {
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            function visualizeGradientDescent() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+                drawParabola(); // Draw the parabola
+
+                for (let i = 0; i < iterations; i++) {
+                    setTimeout(() => {
+                        // Calculate the new value of x using gradient descent
+                        x = x - learningRate * gradient(x);
+                        const canvasX = (x + 5) * (canvas.width / 10); // Map x to canvas coordinates
+                        const canvasY = canvas.height - (f(x) * (canvas.height / 25)); // Map y to canvas coordinates
+
+                        // Draw the point representing the current value of x
+                        drawPoint(canvasX, canvasY);
+                    }, i * 200);
+                }
+            }
+
+            visualizeGradientDescent();
+        }
+    </script>
+</body>
+</html>
