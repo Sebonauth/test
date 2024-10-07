@@ -3,91 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gradient Descent Visualization</title>
+    <title>Neural Network Visualizer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
             flex-direction: column;
-        }
-        #output {
-            margin-top: 20px;
-            font-size: 1.5em;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
         }
         canvas {
             border: 1px solid black;
+            background-color: #f9f9f9;
+        }
+        .controls {
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div>
-        <button onclick="startVisualization()">Start Gradient Descent Visualization</button>
-        <canvas id="canvas" width="500" height="400"></canvas>
-        <div id="output"></div>
+    <h2>Neural Network Visualizer</h2>
+    <canvas id="networkCanvas" width="600" height="400"></canvas>
+    <div class="controls">
+        <button onclick="forwardPropagation()">Run Forward Propagation</button>
     </div>
 
     <script>
-        function startVisualization() {
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            let x = Math.random() * 10 - 5; // Initial random value between -5 and 5
-            const learningRate = 0.1;
-            const iterations = 50;
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
 
-            function gradient(x) {
-                return 2 * x; // Derivative of the function f(x) = x^2
-            }
+        // Neural Network structure
+        const layers = [
+            { neurons: 3 },  // Input layer
+            { neurons: 4 },  // Hidden layer 1
+            { neurons: 4 },  // Hidden layer 2
+            { neurons: 2 }   // Output layer
+        ];
 
-            function f(x) {
-                return x * x; // Parabola function f(x) = x^2
-            }
+        const positions = []; // Store neuron positions for drawing connections
 
-            function drawParabola() {
-                ctx.beginPath();
-                ctx.moveTo(0, canvas.height);
-                for (let i = -5; i <= 5; i += 0.1) {
-                    const canvasX = (i + 5) * (canvas.width / 10);
-                    const canvasY = canvas.height - (f(i) * (canvas.height / 25)); // Scale y value to fit canvas
-                    ctx.lineTo(canvasX, canvasY);
+        // Draw the initial neural network
+        function drawNetwork() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            positions.length = 0;
+
+            layers.forEach((layer, layerIndex) => {
+                const numNeurons = layer.neurons;
+                const ySpacing = canvas.height / (numNeurons + 1);
+                const x = (layerIndex + 1) * (canvas.width / (layers.length + 1));
+                const layerPositions = [];
+
+                for (let i = 0; i < numNeurons; i++) {
+                    const y = (i + 1) * ySpacing;
+                    drawNeuron(x, y);
+                    layerPositions.push({ x, y });
                 }
-                ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.closePath();
+
+                positions.push(layerPositions);
+            });
+
+            // Draw connections between layers
+            for (let i = 0; i < positions.length - 1; i++) {
+                const currentLayer = positions[i];
+                const nextLayer = positions[i + 1];
+
+                currentLayer.forEach(neuronA => {
+                    nextLayer.forEach(neuronB => {
+                        drawConnection(neuronA, neuronB);
+                    });
+                });
             }
-
-            function drawPoint(x, y) {
-                ctx.beginPath();
-                ctx.arc(x, y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = 'red';
-                ctx.fill();
-                ctx.closePath();
-            }
-
-            function visualizeGradientDescent() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-                drawParabola(); // Draw the parabola
-
-                for (let i = 0; i < iterations; i++) {
-                    setTimeout(() => {
-                        // Calculate the new value of x using gradient descent
-                        x = x - learningRate * gradient(x);
-                        const canvasX = (x + 5) * (canvas.width / 10); // Map x to canvas coordinates
-                        const canvasY = canvas.height - (f(x) * (canvas.height / 25)); // Map y to canvas coordinates
-
-                        // Draw the point representing the current value of x
-                        drawPoint(canvasX, canvasY);
-                    }, i * 200);
-                }
-            }
-
-            visualizeGradientDescent();
         }
+
+        // Draw a neuron (circle)
+        function drawNeuron(x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Draw a connection (line)
+        function drawConnection(start, end) {
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.strokeStyle = '#aaa';
+            ctx.stroke();
+        }
+
+        // Simulate forward propagation
+        function forwardPropagation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawNetwork();
+
+            // Highlight forward propagation
+            for (let i = 0; i < positions.length - 1; i++) {
+                const currentLayer = positions[i];
+                const nextLayer = positions[i + 1];
+
+                currentLayer.forEach(neuronA => {
+                    nextLayer.forEach(neuronB => {
+                        // Draw active connection in a different color
+                        ctx.beginPath();
+                        ctx.moveTo(neuronA.x, neuronA.y);
+                        ctx.lineTo(neuronB.x, neuronB.y);
+                        ctx.strokeStyle = '#00f'; // Blue for active connection
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    });
+                });
+            }
+        }
+
+        drawNetwork();
     </script>
 </body>
 </html>
