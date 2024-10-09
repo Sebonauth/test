@@ -1,124 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neural Network Visualizer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-        }
-        canvas {
-            border: 1px solid black;
-            background-color: #f9f9f9;
-        }
-        .controls {
-            margin-top: 20px;
-        }
-    </style>
+    <meta charset="utf-8">
+    <title>Steepest Descent Animation</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <h2>Neural Network Visualizer</h2>
-    <canvas id="networkCanvas" width="600" height="400"></canvas>
-    <div class="controls">
-        <button onclick="forwardPropagation()">Run Forward Propagation</button>
-    </div>
-
+    <div id="plot" style="width:100%;height:100vh;"></div>
     <script>
-        const canvas = document.getElementById('networkCanvas');
-        const ctx = canvas.getContext('2d');
+        // Define the surface function
+        function surfaceFunction(x, y) {
+            return x.map(row => row.map(val => val * val)).map((row, i) => row.map((val, j) => val + y[i][j]*y[i][j]));
+        }
 
-        // Neural Network structure
-        const layers = [
-            { neurons: 3 },  // Input layer
-            { neurons: 4 },  // Hidden layer 1
-            { neurons: 4 },  // Hidden layer 2
-            { neurons: 2 }   // Output layer
-        ];
+        // Generate grid
+        var x = [];
+        var y = [];
+        var range = [-5, 5];
+        var points = 50;
+        for (var i = 0; i < points; i++) {
+            x.push(range[0] + (range[1]-range[0])/points * i);
+            y.push(range[0] + (range[1]-range[0])/points * i);
+        }
 
-        const positions = []; // Store neuron positions for drawing connections
+        var z = surfaceFunction(x.map(xi => x.map(xj => xi)), y.map(yi => y.map(yj => yi)));
 
-        // Draw the initial neural network
-        function drawNetwork() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            positions.length = 0;
+        // Create surface
+        var surface = {
+            type: 'surface',
+            x: x,
+            y: y,
+            z: z,
+            colorscale: 'Viridis',
+            opacity: 0.8,
+            name: 'Surface'
+        };
 
-            layers.forEach((layer, layerIndex) => {
-                const numNeurons = layer.neurons;
-                const ySpacing = canvas.height / (numNeurons + 1);
-                const x = (layerIndex + 1) * (canvas.width / (layers.length + 1));
-                const layerPositions = [];
+        // Initial point
+        var path_x = [4];
+        var path_y = [4];
+        var path_z = [32]; // 4^2 + 4^2
 
-                for (let i = 0; i < numNeurons; i++) {
-                    const y = (i + 1) * ySpacing;
-                    drawNeuron(x, y);
-                    layerPositions.push({ x, y });
+        // Compute path
+        var steps = 50;
+        var lr = 0.1;
+        for (var i = 0; i < steps; i++) {
+            var grad_x = 2 * path_x[path_x.length -1];
+            var grad_y = 2 * path_y[path_y.length -1];
+            var new_x = path_x[path_x.length -1] - lr * grad_x;
+            var new_y = path_y[path_y.length -1] - lr * grad_y;
+            var new_z = new_x*new_x + new_y*new_y;
+            path_x.push(new_x);
+            path_y.push(new_y);
+            path_z.push(new_z);
+        }
+
+        // Create trajectory
+        var trajectory = {
+            type: 'scatter3d',
+            x: path_x,
+            y: path_y,
+            z: path_z,
+            mode: 'lines+markers',
+            line: {
+                color: 'red',
+                width: 4
+            },
+            marker: {
+                size: 6
+            },
+            name: 'Descent Path'
+        };
+
+        var data = [surface, trajectory];
+
+        var layout = {
+            title: 'Steepest Descent on a 3D Surface',
+            scene: {
+                xaxis: {title: 'X'},
+                yaxis: {title: 'Y'},
+                zaxis: {title: 'Z'}
+            }
+        };
+
+        Plotly.newPlot('plot', data, layout).then(function(fig) {
+            // Animate the trajectory
+            var update = {
+                x: [path_x.slice(0,1)],
+                y: [path_y.slice(0,1)],
+                z: [path_z.slice(0,1)]
+            };
+            Plotly.animate('plot', {
+                data: [{
+                    x: path_x,
+                    y: path_y,
+                    z: path_z
+                }],
+                traces: [1],
+                layout: {}
+            }, {
+                transition: {
+                    duration: 0
+                },
+                frame: {
+                    duration: 100,
+                    redraw: false
                 }
-
-                positions.push(layerPositions);
             });
-
-            // Draw connections between layers
-            for (let i = 0; i < positions.length - 1; i++) {
-                const currentLayer = positions[i];
-                const nextLayer = positions[i + 1];
-
-                currentLayer.forEach(neuronA => {
-                    nextLayer.forEach(neuronB => {
-                        drawConnection(neuronA, neuronB);
-                    });
-                });
-            }
-        }
-
-        // Draw a neuron (circle)
-        function drawNeuron(x, y) {
-            ctx.beginPath();
-            ctx.arc(x, y, 20, 0, 2 * Math.PI);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-            ctx.stroke();
-        }
-
-        // Draw a connection (line)
-        function drawConnection(start, end) {
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.strokeStyle = '#aaa';
-            ctx.stroke();
-        }
-
-        // Simulate forward propagation
-        function forwardPropagation() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawNetwork();
-
-            // Highlight forward propagation
-            for (let i = 0; i < positions.length - 1; i++) {
-                const currentLayer = positions[i];
-                const nextLayer = positions[i + 1];
-
-                currentLayer.forEach(neuronA => {
-                    nextLayer.forEach(neuronB => {
-                        // Draw active connection in a different color
-                        ctx.beginPath();
-                        ctx.moveTo(neuronA.x, neuronA.y);
-                        ctx.lineTo(neuronB.x, neuronB.y);
-                        ctx.strokeStyle = '#00f'; // Blue for active connection
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                    });
-                });
-            }
-        }
-
-        drawNetwork();
+        });
     </script>
 </body>
 </html>
